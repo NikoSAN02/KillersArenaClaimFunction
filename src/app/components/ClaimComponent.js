@@ -24,22 +24,10 @@ export default function ClaimComponent() {
   const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
-  const [claimAmount, setClaimAmount] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Use useEffect to get URL parameters instead of useSearchParams
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const amountFromQuery = urlParams.get('amount');
-      if (amountFromQuery) {
-        setClaimAmount(amountFromQuery);
-      }
-      setIsLoading(false);
-    }
-  }, []);
+  const claimAmount = 10; // Hardcoded claim amount
 
   const getTypedData = (address, amountToClaim) => {
     return {
@@ -51,7 +39,7 @@ export default function ClaimComponent() {
       },
       message: {
         recipient: address,
-        amount: ethers.parseUnits(amountToClaim || "0", 18)
+        amount: ethers.parseUnits(String(amountToClaim) || "0", 18)
       },
       primaryType: "Claim",
       types: {
@@ -69,11 +57,6 @@ export default function ClaimComponent() {
       return;
     }
 
-    if (!claimAmount) {
-      alert("Claim amount not loaded yet");
-      return;
-    }
-
     setIsClaiming(true);
     try {
       const signer = await provider.getSigner();
@@ -88,7 +71,7 @@ export default function ClaimComponent() {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_ABI, signer);
 
       // Convert amount to wei
-      const amountWei = ethers.parseUnits(claimAmount, 18);
+      const amountWei = ethers.parseUnits(String(claimAmount), 18);
       const signatureBytes = ethers.getBytes(signature);
 
       // Call contract directly
@@ -139,40 +122,22 @@ export default function ClaimComponent() {
     }
   };
 
-  // Show loading state while checking for URL parameters
-  if (isLoading) {
-    return (
-      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-          <div>Loading claim information...</div>
-        </main>
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        {claimAmount ? (
-          <div className="text-center mb-4">
-            <h1 className="text-2xl font-bold">Claim {claimAmount} Tokens</h1>
-            <p className="text-gray-600">Connect your wallet to claim your tokens</p>
-          </div>
-        ) : (
-          <div className="text-center mb-4">
-            <h1 className="text-2xl font-bold">No Claim Amount</h1>
-            <p className="text-gray-600">Please access this page through a valid claim link</p>
-          </div>
-        )}
+        <div className="text-center mb-4">
+          <h1 className="text-2xl font-bold">Claim 10 Tokens</h1>
+          <p className="text-gray-600">Connect your wallet to claim your tokens</p>
+        </div>
         
-        {claimAmount && !isConnected ? (
+        {!isConnected ? (
           <button
             onClick={connectWallet}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Connect Wallet
           </button>
-        ) : claimAmount && isConnected ? (
+        ) : (
           <div className="flex gap-4 items-center flex-col sm:flex-row">
             <p className="text-sm">
               Connected: {account.slice(0, 6)}...{account.slice(-4)}
@@ -183,11 +148,11 @@ export default function ClaimComponent() {
                 disabled={isClaiming}
                 className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
               >
-                {isClaiming ? "Claiming..." : `Claim ${claimAmount} Tokens`}
+                {isClaiming ? "Claiming..." : "Claim 10 Tokens"}
               </button>
             </div>
           </div>
-        ) : null}
+        )}
       </main>
     </div>
   );
