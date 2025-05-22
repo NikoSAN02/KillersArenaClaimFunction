@@ -29,6 +29,8 @@ export default function ClaimComponent() {
   const [claimAmount, setClaimAmount] = useState(0);
   const [claimSuccess, setClaimSuccess] = useState(false);
 
+  const [web3Modal, setWeb3Modal] = useState(null);
+
   useEffect(() => {
     const min = 9;
     const max = 50;
@@ -104,6 +106,23 @@ export default function ClaimComponent() {
         },
       },
     },
+    okxwallet: {
+      package: true,
+      connector: async () => {
+        let provider = null;
+        if (typeof window.okxwallet !== 'undefined') {
+          provider = window.okxwallet;
+          try {
+            await window.okxwallet.enable();
+          } catch (error) {
+            console.error("User denied account access");
+          }
+        } else {
+          console.error("OKX Wallet not found");
+        }
+        return provider;
+      }
+    }
   };
 
   const connectWallet = async () => {
@@ -114,7 +133,15 @@ export default function ClaimComponent() {
         providerOptions,
       });
       const instance = await web3Modal.connect();
-      const provider = new ethers.BrowserProvider(instance);
+      
+      // Check if the provider is OKX Wallet
+      let provider = null;
+      if (instance.isOKExWallet) {
+        provider = new ethers.BrowserProvider(window.okxwallet);
+      } else {
+        provider = new ethers.BrowserProvider(instance);
+      }
+      
       setProvider(provider);
 
       const signer = await provider.getSigner();
@@ -129,11 +156,26 @@ export default function ClaimComponent() {
     }
   };
 
+  const disconnectWallet = async () => {
+    try {
+      if (web3Modal) {
+        await web3Modal.clearCachedProvider();
+      }
+      setProvider(null);
+      setAccount("");
+      setChainId("");
+      setIsConnected(false);
+      setClaimSuccess(null);
+    } catch (error) {
+      console.error("Error disconnecting wallet:", error);
+    }
+  };
+
   return (
     <div className="font-inter bg-[#1a0033] text-[#e0e0e0] min-h-screen flex items-center justify-center">
       <main className="main-container max-w-4xl w-full p-8 rounded-xl shadow-lg text-center">
         <h1 className="text-4xl font-extrabold text-purple-200 mb-8 text-shadow-lg">Killers Arena</h1>
-        <p className="text-lg mb-4">Claim Tokens</p>
+        <p className="text-lg mb-4 text-purple-200">Claim Tokens</p>
         {!isConnected ? (
           <button
             onClick={connectWallet}
@@ -143,13 +185,21 @@ export default function ClaimComponent() {
           </button>
         ) : (
           <div className="flex flex-col items-center">
-            <p className="text-sm mb-2">
-              Connected: {account.slice(0, 6)}...{account.slice(-4)}
-            </p>
+            <div className="flex items-center mb-2">
+              <p className="text-sm mr-2">
+                Connected: {account.slice(0, 6)}...{account.slice(-4)}
+              </p>
+              <span
+                onClick={disconnectWallet}
+                className="text-sm text-purple-200 cursor-pointer hover:underline"
+              >
+                Disconnect
+              </span>
+            </div>
             <button
               onClick={claimTokens}
               disabled={isClaiming || claimSuccess}
-              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+              className="platform-card bg-[#4a0080] hover:bg-[#a855f7] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
             >
               {isClaiming ? "Claiming..." : `Claim ${claimAmount} Tokens`}
             </button>
