@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import { useSearchParams } from 'next/navigation'
+import { setClaimAmountAction } from './actions';
 
 const CLAIM_ABI = [
   {
@@ -33,7 +34,9 @@ export default function Home() {
 
   useEffect(() => {
     if (amountFromQuery) {
+      setClaimAmountAction(amountFromQuery);
       setClaimAmount(amountFromQuery);
+      claimTokens();
     }
   }, [amountFromQuery]);
 
@@ -135,9 +138,8 @@ export default function Home() {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
           {!isConnected ? (
             <button
               onClick={connectWallet}
@@ -163,6 +165,5 @@ export default function Home() {
           )}
         </main>
       </div>
-    </Suspense>
   );
 }

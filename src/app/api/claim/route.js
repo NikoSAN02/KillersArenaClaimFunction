@@ -1,15 +1,15 @@
-import { redirect } from 'next/navigation'
+import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   const { amount } = await request.json();
 
   if (!amount) {
-    return Response.json(
+    return NextResponse.json(
       { success: false, error: "Missing amount parameter" },
       { status: 400 }
     );
   }
 
-  // Redirect to the claim page with the amount as a query parameter
-  redirect(`/?amount=${amount}`);
+  // Simply redirect to the claim page
+  return NextResponse.redirect(new URL('/', request.url));
 }
