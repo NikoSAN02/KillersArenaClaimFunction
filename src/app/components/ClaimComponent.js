@@ -1,9 +1,8 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
-import { useSearchParams } from 'next/navigation'
 import { setClaimAmountAction } from '../actions';
 
 const CLAIM_ABI = [
@@ -21,22 +20,26 @@ const CLAIM_ABI = [
 
 const CONTRACT_ADDRESS = "0xE16bcF46B98cab58C661531Ff02D64DA59C39D19";
 
-function ClaimComponentInner() {
+export default function ClaimComponent() {
   const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
   const [claimAmount, setClaimAmount] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const searchParams = useSearchParams()
-  const amountFromQuery = searchParams.get('amount')
-
+  // Use useEffect to get URL parameters instead of useSearchParams
   useEffect(() => {
-    if (amountFromQuery) {
-      setClaimAmount(amountFromQuery);
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const amountFromQuery = urlParams.get('amount');
+      if (amountFromQuery) {
+        setClaimAmount(amountFromQuery);
+      }
+      setIsLoading(false);
     }
-  }, [amountFromQuery]);
+  }, []);
 
   const getTypedData = (address, amountToClaim) => {
     return {
@@ -136,24 +139,40 @@ function ClaimComponentInner() {
     }
   };
 
+  // Show loading state while checking for URL parameters
+  if (isLoading) {
+    return (
+      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+          <div>Loading claim information...</div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        {claimAmount && (
+        {claimAmount ? (
           <div className="text-center mb-4">
             <h1 className="text-2xl font-bold">Claim {claimAmount} Tokens</h1>
             <p className="text-gray-600">Connect your wallet to claim your tokens</p>
           </div>
+        ) : (
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold">No Claim Amount</h1>
+            <p className="text-gray-600">Please access this page through a valid claim link</p>
+          </div>
         )}
         
-        {!isConnected ? (
+        {claimAmount && !isConnected ? (
           <button
             onClick={connectWallet}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Connect Wallet
           </button>
-        ) : (
+        ) : claimAmount && isConnected ? (
           <div className="flex gap-4 items-center flex-col sm:flex-row">
             <p className="text-sm">
               Connected: {account.slice(0, 6)}...{account.slice(-4)}
@@ -161,29 +180,15 @@ function ClaimComponentInner() {
             <div className="flex gap-2">
               <button
                 onClick={claimTokens}
-                disabled={isClaiming || !claimAmount}
+                disabled={isClaiming}
                 className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
               >
-                {isClaiming ? "Claiming..." : `Claim ${claimAmount || '0'} Tokens`}
+                {isClaiming ? "Claiming..." : `Claim ${claimAmount} Tokens`}
               </button>
             </div>
           </div>
-        )}
+        ) : null}
       </main>
     </div>
-  );
-}
-
-export default function ClaimComponent() {
-  return (
-    <Suspense fallback={
-      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-          <div>Loading claim information...</div>
-        </main>
-      </div>
-    }>
-      <ClaimComponentInner />
-    </Suspense>
   );
 }
