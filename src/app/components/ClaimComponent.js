@@ -127,21 +127,29 @@ export default function ClaimComponent() {
 
   const connectWallet = async () => {
     try {
-      const web3Modal = new Web3Modal({
+      const web3ModalInstance = new Web3Modal({
         network: "zkCandy",
         cacheProvider: true,
         providerOptions,
       });
-      const instance = await web3Modal.connect();
-      
+      setWeb3Modal(web3ModalInstance);
+      let instance;
+
+      // Check if OKX Wallet is available
+      if (window.okxwallet) {
+        instance = window.okxwallet;
+      } else {
+        instance = await web3ModalInstance.connect();
+      }
+
       // Check if the provider is OKX Wallet
       let provider = null;
-      if (instance.isOKExWallet) {
+      if (instance.isOKExWallet || window.okxwallet) {
         provider = new ethers.BrowserProvider(window.okxwallet);
       } else {
         provider = new ethers.BrowserProvider(instance);
       }
-      
+
       setProvider(provider);
 
       const signer = await provider.getSigner();
