@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, Suspense } from "react"; // Import Suspense
+import { useState, useEffect, Suspense } from "react";
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
@@ -34,9 +34,71 @@ export default function Home() {
   useEffect(() => {
     if (amountFromQuery) {
       setClaimAmount(amountFromQuery);
-      claimTokens(); // Trigger claimTokens when amountFromQuery is updated
     }
   }, [amountFromQuery]);
+
+  const getTypedData = (address, amountToClaim) => {
+    return {
+      domain: {
+        name: "GameTokenClaim",
+        version: "1",
+        chainId: 320,
+        verifyingContract: CONTRACT_ADDRESS
+      },
+      message: {
+        recipient: address,
+        amount: ethers.parseUnits(amountToClaim || "0", 18)
+      },
+      primaryType: "Claim",
+      types: {
+        Claim: [
+          { name: "recipient", type: "address" },
+          { name: "amount", type: "uint256" }
+        ]
+      }
+    };
+  };
+
+  const claimTokens = async () => {
+    if (!provider || !account) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
+    if (!claimAmount) {
+      alert("Claim amount not loaded yet");
+      return;
+    }
+
+    setIsClaiming(true);
+    try {
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      const typedData = getTypedData(address, claimAmount);
+      const signature = await signer.signTypedData(
+        typedData.domain,
+        typedData.types,
+        typedData.message
+      );
+
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_ABI, signer);
+
+      // Convert amount to wei
+      const amountWei = ethers.parseUnits(claimAmount, 18);
+      const signatureBytes = ethers.getBytes(signature);
+
+      // Call contract directly
+      const tx = await contract.claimTokens(amountWei, signatureBytes);
+      await tx.wait();
+
+      alert(`Claim successful! TX Hash: ${tx.hash}`);
+    } catch (error) {
+      console.error(error);
+      alert(`Claim failed: ${error.message}`);
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   const providerOptions = {
     walletconnect: {
@@ -72,40 +134,8 @@ export default function Home() {
     }
   };
 
-  const claimTokens = async () => {
-    if (!provider || !account) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
-    if (!claimAmount) {
-      alert("Claim amount not loaded yet");
-      return;
-    }
-
-    setIsClaiming(true);
-    try {
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_ABI, signer);
-
-      // Convert amount to wei
-      const amountWei = ethers.parseUnits(claimAmount, 18);
-
-      // Call contract directly
-      const tx = await contract.claimTokens(amountWei, account);
-      await tx.wait();
-
-      alert(`Claim successful! TX Hash: ${tx.hash}`);
-    } catch (error) {
-      console.error(error);
-      alert(`Claim failed: ${error.message}`);
-    } finally {
-      setIsClaiming(false);
-    }
-  };
-
   return (
-    <Suspense fallback={<div>Loading...</div>}> {/* Wrap the component in Suspense */}
+    <Suspense fallback={<div>Loading...</div>}>
       <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
         <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
           {!isConnected ? (
