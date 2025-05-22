@@ -1,9 +1,9 @@
 {
+  "version": 2,
   "routes": [
     {
       "src": "/api/claim",
-      "methods": ["POST"],
-      "dest": "/api/claim/route.js"
+      "dest": "src/app/api/claim/route.js"
     }
   ]
 }
