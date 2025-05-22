@@ -34,9 +34,7 @@ export default function Home() {
 
   useEffect(() => {
     if (amountFromQuery) {
-      setClaimAmountAction(amountFromQuery);
       setClaimAmount(amountFromQuery);
-      claimTokens();
     }
   }, [amountFromQuery]);
 
@@ -100,6 +98,7 @@ export default function Home() {
       alert(`Claim failed: ${error.message}`);
     } finally {
       setIsClaiming(false);
+      setClaimAmountAction(claimAmount); // Call the server action here
     }
   };
 
