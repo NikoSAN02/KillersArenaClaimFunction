@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react"; // Import Suspense
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
@@ -105,32 +105,34 @@ export default function Home() {
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        {!isConnected ? (
-          <button
-            onClick={connectWallet}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Connect Wallet
-          </button>
-        ) : (
-          <div className="flex gap-4 items-center flex-col sm:flex-row">
-            <p className="text-sm">
-              Connected: {account.slice(0, 6)}...{account.slice(-4)}
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={claimTokens}
-                disabled={isClaiming}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
-              >
-                {isClaiming ? "Claiming..." : "Claim Tokens"}
-              </button>
+    <Suspense fallback={<div>Loading...</div>}> {/* Wrap the component in Suspense */}
+      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+          {!isConnected ? (
+            <button
+              onClick={connectWallet}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Connect Wallet
+            </button>
+          ) : (
+            <div className="flex gap-4 items-center flex-col sm:flex-row">
+              <p className="text-sm">
+                Connected: {account.slice(0, 6)}...{account.slice(-4)}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={claimTokens}
+                  disabled={isClaiming}
+                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
+                >
+                  {isClaiming ? "Claiming..." : "Claim Tokens"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-      </main>
-    </div>
+          )}
+        </main>
+      </div>
+    </Suspense>
   );
 }
