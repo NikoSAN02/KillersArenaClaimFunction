@@ -5,9 +5,9 @@ export async function GET(request) {
   const amount = url.searchParams.get('amount');
   
   if (amount) {
-    const redirectUrl = new URL('/', url.origin);
-    redirectUrl.searchParams.set('amount', amount);
-    return NextResponse.redirect(redirectUrl.toString());
+    // Use absolute URL for redirect
+    const redirectUrl = `${url.origin}/?amount=${encodeURIComponent(amount)}`;
+    return NextResponse.redirect(redirectUrl, 302);
   }
   
   return NextResponse.json({ message: "Claim API GET - add ?amount=123 to test redirect" });
@@ -24,11 +24,11 @@ export async function POST(request) {
       );
     }
     
+    // Use absolute URL for redirect
     const url = new URL(request.url);
-    const redirectUrl = new URL('/', url.origin);
-    redirectUrl.searchParams.set('amount', amount);
+    const redirectUrl = `${url.origin}/?amount=${encodeURIComponent(amount)}`;
     
-    return NextResponse.redirect(redirectUrl.toString());
+    return NextResponse.redirect(redirectUrl, 302);
     
   } catch (error) {
     return NextResponse.json(
