@@ -26,8 +26,15 @@ export default function ClaimComponent() {
   const [chainId, setChainId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [claimAmount, setClaimAmount] = useState(0);
+  const [claimSuccess, setClaimSuccess] = useState(false);
 
-  const claimAmount = 10; // Hardcoded claim amount
+  useEffect(() => {
+    const min = 9;
+    const max = 50;
+    const randomAmount = Math.floor(Math.random() * (max - min + 1)) + min;
+    setClaimAmount(randomAmount);
+  }, []);
 
   const getTypedData = (address, amountToClaim) => {
     return {
@@ -78,7 +85,7 @@ export default function ClaimComponent() {
       const tx = await contract.claimTokens(amountWei, signatureBytes);
       await tx.wait();
 
-      alert(`Claim successful! TX Hash: ${tx.hash}`);
+      setClaimSuccess(tx.hash);
     } catch (error) {
       console.error(error);
       alert(`Claim failed: ${error.message}`);
@@ -123,34 +130,30 @@ export default function ClaimComponent() {
   };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <div className="text-center mb-4">
-          <h1 className="text-2xl font-bold">Claim 10 Tokens</h1>
-          <p className="text-gray-600">Connect your wallet to claim your tokens</p>
-        </div>
-        
+    <div className="font-inter bg-[#1a0033] text-[#e0e0e0] min-h-screen flex items-center justify-center">
+      <main className="main-container max-w-4xl w-full p-8 rounded-xl shadow-lg text-center">
+        <h1 className="text-4xl font-extrabold text-purple-200 mb-8 text-shadow-lg">Killers Arena</h1>
+        <p className="text-lg mb-4">Claim Tokens</p>
         {!isConnected ? (
           <button
             onClick={connectWallet}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="platform-card bg-[#4a0080] hover:bg-[#a855f7] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             Connect Wallet
           </button>
         ) : (
-          <div className="flex gap-4 items-center flex-col sm:flex-row">
-            <p className="text-sm">
+          <div className="flex flex-col items-center">
+            <p className="text-sm mb-2">
               Connected: {account.slice(0, 6)}...{account.slice(-4)}
             </p>
-            <div className="flex gap-2">
-              <button
-                onClick={claimTokens}
-                disabled={isClaiming}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
-              >
-                {isClaiming ? "Claiming..." : "Claim 10 Tokens"}
-              </button>
-            </div>
+            <button
+              onClick={claimTokens}
+              disabled={isClaiming || claimSuccess}
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
+            >
+              {isClaiming ? "Claiming..." : `Claim ${claimAmount} Tokens`}
+            </button>
+            {claimSuccess && <p>Claim successful! TX Hash: {claimSuccess}</p>}
           </div>
         )}
       </main>
