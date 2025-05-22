@@ -19,6 +19,7 @@ const CLAIM_ABI = [
 ];
 
 const CONTRACT_ADDRESS = "0xE16bcF46B98cab58C661531Ff02D64DA59C39D19";
+const COOLDOWN_MS = 2 * 60 * 1000; // 2 minutes in milliseconds
 
 export default function ClaimComponent() {
   const [provider, setProvider] = useState(null);
@@ -28,8 +29,12 @@ export default function ClaimComponent() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimAmount, setClaimAmount] = useState(0);
   const [claimSuccess, setClaimSuccess] = useState(false);
-
   const [web3Modal, setWeb3Modal] = useState(null);
+  
+  // Cooldown states
+  const [canClaim, setCanClaim] = useState(true);
+  const [remainingTime, setRemainingTime] = useState(0);
+  const [showCooldownMessage, setShowCooldownMessage] = useState(false);
 
   useEffect(() => {
     const min = 9;
@@ -37,6 +42,49 @@ export default function ClaimComponent() {
     const randomAmount = Math.floor(Math.random() * (max - min + 1)) + min;
     setClaimAmount(randomAmount);
   }, []);
+
+  // Check cooldown status
+  const checkCooldown = (isInitialLoad = false) => {
+    const lastClaimTime = localStorage.getItem('lastClaimTime');
+    if (!lastClaimTime) {
+      setCanClaim(true);
+      setRemainingTime(0);
+      setShowCooldownMessage(false);
+      return true;
+    }
+
+    const now = Date.now();
+    const timeSinceLastClaim = now - parseInt(lastClaimTime);
+    
+    if (timeSinceLastClaim >= COOLDOWN_MS) {
+      setCanClaim(true);
+      setRemainingTime(0);
+      setShowCooldownMessage(false);
+      return true;
+    } else {
+      setCanClaim(false);
+      setRemainingTime(COOLDOWN_MS - timeSinceLastClaim);
+      // Only show message on initial load/refresh when user hasn't just claimed
+      if (isInitialLoad && !claimSuccess) {
+        setShowCooldownMessage(true);
+      }
+      return false;
+    }
+  };
+
+  // Update cooldown every second
+  useEffect(() => {
+    checkCooldown(true); // Initial load
+    const interval = setInterval(() => checkCooldown(false), 1000); // Regular updates
+    return () => clearInterval(interval);
+  }, []);
+
+  // Format remaining time for display
+  const formatRemainingTime = (timeMs) => {
+    const minutes = Math.floor(timeMs / 60000);
+    const seconds = Math.floor((timeMs % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const getTypedData = (address, amountToClaim) => {
     return {
@@ -66,6 +114,11 @@ export default function ClaimComponent() {
       return;
     }
 
+    if (!canClaim) {
+      alert(`Please wait ${formatRemainingTime(remainingTime)} before claiming again`);
+      return;
+    }
+
     setIsClaiming(true);
     try {
       const signer = await provider.getSigner();
@@ -87,7 +140,17 @@ export default function ClaimComponent() {
       const tx = await contract.claimTokens(amountWei, signatureBytes);
       await tx.wait();
 
+      // Set cooldown after successful claim
+      localStorage.setItem('lastClaimTime', Date.now().toString());
+      
       setClaimSuccess(tx.hash);
+      
+      // Hide cooldown message since user just claimed successfully
+      setShowCooldownMessage(false);
+      
+      // Immediately update cooldown status (not initial load)
+      checkCooldown(false);
+      
     } catch (error) {
       console.error(error);
       alert(`Claim failed: ${error.message}`);
@@ -204,14 +267,41 @@ export default function ClaimComponent() {
                 Disconnect
               </span>
             </div>
-            <button
-              onClick={claimTokens}
-              disabled={isClaiming || claimSuccess}
-              className="platform-card bg-[#4a0080] hover:bg-[#a855f7] text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-50"
-            >
-              {isClaiming ? "Claiming..." : `Claim ${claimAmount} Tokens`}
-            </button>
-            {claimSuccess && <p>Claim successful! TX Hash: {claimSuccess}</p>}
+            
+            {/* Cooldown Status Display - Only show on page refresh, not after successful claim */}
+            {!canClaim && remainingTime > 0 && showCooldownMessage && (
+              <div className="mb-4 p-3 bg-red-900/30 border border-red-500 rounded-lg">
+                <p className="text-red-300 text-sm">
+                  Please wait {formatRemainingTime(remainingTime)} before claiming again
+                </p>
+              </div>
+            )}
+            
+            {!claimSuccess && (
+              <button
+                onClick={claimTokens}
+                disabled={isClaiming || !canClaim}
+                className={`platform-card font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
+                  !canClaim 
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                    : 'bg-[#4a0080] hover:bg-[#a855f7] text-white'
+                } ${isClaiming ? 'opacity-50' : ''}`}
+              >
+                {isClaiming 
+                  ? "Claiming..." 
+                  : !canClaim 
+                    ? `Wait ${formatRemainingTime(remainingTime)}` 
+                    : `Claim ${claimAmount} Tokens`}
+              </button>
+            )}
+            
+            {claimSuccess && (
+              <div className="mt-4 p-3 bg-green-900/30 border border-green-500 rounded-lg">
+                <p className="text-green-300 text-sm">
+                  Claim successful! TX Hash: {claimSuccess}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </main>
