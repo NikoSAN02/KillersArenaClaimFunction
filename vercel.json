@@ -1,0 +1,9 @@
+{
+  "routes": [
+    {
+      "src": "/api/claim",
+      "methods": ["POST"],
+      "dest": "/api/claim/route.js"
+    }
+  ]
+}

@@ -13,3 +13,9 @@ export async function POST(request) {
   // Simply redirect to the claim page
   return NextResponse.redirect(new URL('/', request.url));
 }
+
+export async function OPTIONS(request) {
+  return NextResponse.json({
+    allow: 'POST',
+  });
+}
