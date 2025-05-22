@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { ethers } from "ethers";
 import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
@@ -21,7 +21,7 @@ const CLAIM_ABI = [
 
 const CONTRACT_ADDRESS = "0xE16bcF46B98cab58C661531Ff02D64DA59C39D19";
 
-export default function ClaimComponent() {
+function ClaimComponentInner() {
   const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState("");
@@ -130,7 +130,7 @@ export default function ClaimComponent() {
 
       const network = await provider.getNetwork();
       setChainId(network.chainId.toString());
-      setIsConnected(true); // Set connected state to true
+      setIsConnected(true);
     } catch (error) {
       console.error("Error connecting wallet:", error);
     }
@@ -139,30 +139,51 @@ export default function ClaimComponent() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-          {!isConnected ? (
-            <button
-              onClick={connectWallet}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Connect Wallet
-            </button>
-          ) : (
-            <div className="flex gap-4 items-center flex-col sm:flex-row">
-              <p className="text-sm">
-                Connected: {account.slice(0, 6)}...{account.slice(-4)}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={claimTokens}
-                  disabled={isClaiming}
-                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
-                >
-                  {isClaiming ? "Claiming..." : "Claim Tokens"}
-                </button>
-              </div>
+        {claimAmount && (
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-bold">Claim {claimAmount} Tokens</h1>
+            <p className="text-gray-600">Connect your wallet to claim your tokens</p>
+          </div>
+        )}
+        
+        {!isConnected ? (
+          <button
+            onClick={connectWallet}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Connect Wallet
+          </button>
+        ) : (
+          <div className="flex gap-4 items-center flex-col sm:flex-row">
+            <p className="text-sm">
+              Connected: {account.slice(0, 6)}...{account.slice(-4)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={claimTokens}
+                disabled={isClaiming || !claimAmount}
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400"
+              >
+                {isClaiming ? "Claiming..." : `Claim ${claimAmount || '0'} Tokens`}
+              </button>
             </div>
-          )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export default function ClaimComponent() {
+  return (
+    <Suspense fallback={
+      <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
+        <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+          <div>Loading claim information...</div>
         </main>
       </div>
+    }>
+      <ClaimComponentInner />
+    </Suspense>
   );
 }
